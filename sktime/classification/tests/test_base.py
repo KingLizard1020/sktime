@@ -728,6 +728,31 @@ def test_pytorch_optimizer_invalid_raises():
             _mlp_torch_clf(optimizer=optimizer).fit(X_train, y_train)
 
 
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none")
+    or not run_test_module_changed(["sktime.classification", "sktime.utils._lookup"]),
+    reason="skip test if required soft dependency not available",
+)
+@pytest.mark.parametrize("optimizer", ["ExtraOptimizer", "extraoptimizer"])
+def test_pytorch_optimizer_str_from_torch_optim(optimizer, monkeypatch):
+    """Arbitrary torch.optim names resolve, including names not in curated aliases."""
+    import torch
+
+    from sktime.datasets import load_unit_test
+
+    class ExtraOptimizer(torch.optim.SGD):
+        """Optimizer name that is not in the curated alias dictionary."""
+
+    monkeypatch.setattr(torch.optim, "ExtraOptimizer", ExtraOptimizer, raising=False)
+
+    X_train, y_train = load_unit_test(split="train")
+
+    clf = _mlp_torch_clf(optimizer=optimizer)
+    clf.fit(X_train, y_train)
+
+    assert isinstance(clf._optimizer, ExtraOptimizer)
+
+
 DUMMY_EST_PARAMETERS_FOO = [None, 10.3, "string", {"key": "value"}, lambda x: x**2]
 
 
