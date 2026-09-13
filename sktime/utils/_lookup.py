@@ -34,7 +34,10 @@ def _lookup(alias, module_path, alias_dict=None):
 
     Looks up ``alias`` case-insensitively among names exported by
     ``module_path``. An optional ``alias_dict`` of extra aliases (typically
-    lower-case keys to canonical names) is merged on top of that map.
+    lower-case keys to canonical names) is merged in, but only for keys that
+    are not already exported by the module, and only when the alias target
+    is itself an exported name. Existing ``dir()`` names are never overwritten
+    by a bad alias value.
 
     If a match is found, the object is imported with ``_safe_import``.
     Otherwise a ``ValueError`` is raised.
@@ -47,7 +50,8 @@ def _lookup(alias, module_path, alias_dict=None):
         Dotted path of the module to search, for example ``"torch.optim"``.
     alias_dict : dict, optional
         Optional mapping of aliases to canonical names. Keys are matched
-        case-insensitively.
+        case-insensitively. Entries whose key is already exported by
+        ``module_path``, or whose target is not an exported name, are ignored.
 
     Returns
     -------
@@ -63,7 +67,17 @@ def _lookup(alias, module_path, alias_dict=None):
     """
     name_map = _lowercase_importer(module_path)
     if alias_dict is not None:
-        name_map.update({str(k).lower(): v for k, v in alias_dict.items()})
+        exported = dict(name_map)
+        for key, target in alias_dict.items():
+            key_lc = str(key).lower()
+            # do not replace a name already exported by the module
+            if key_lc in name_map:
+                continue
+            target_lc = str(target).lower()
+            # only accept aliases that point at a real exported name
+            if target_lc not in exported:
+                continue
+            name_map[key_lc] = exported[target_lc]
 
     if not isinstance(alias, str) or alias.lower() not in name_map:
         raise ValueError(f"{alias!r} is not a valid name in {module_path}.")

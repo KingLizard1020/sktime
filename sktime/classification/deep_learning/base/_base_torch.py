@@ -610,6 +610,12 @@ class BaseDeepClassifierPytorch(BaseClassifier):
             optimizer_params = {"lr": self.lr}
         # if optimizer is a string, look it up in torch.optim (case-insensitive)
         elif isinstance(self.optimizer, str):
+            unknown_optimizer_msg = (
+                f"Unknown optimizer: {self.optimizer}. Please pass a valid "
+                "optimizer name from torch.optim "
+                "(https://pytorch.org/docs/stable/optim.html#algorithms), "
+                "or an optimizer class or instance."
+            )
             try:
                 optimizer_class = _lookup(
                     self.optimizer,
@@ -617,12 +623,14 @@ class BaseDeepClassifierPytorch(BaseClassifier):
                     alias_dict=self._all_optimizers,
                 )
             except ValueError as err:
-                raise ValueError(
-                    f"Unknown optimizer: {self.optimizer}. Please pass a valid "
-                    "optimizer name from torch.optim "
-                    "(https://pytorch.org/docs/stable/optim.html#algorithms), "
-                    "or an optimizer class or instance."
-                ) from err
+                raise ValueError(unknown_optimizer_msg) from err
+            # dir(torch.optim) also exports modules and the abstract Optimizer base
+            if not (
+                isinstance(optimizer_class, type)
+                and issubclass(optimizer_class, torchOptimizer)
+                and optimizer_class is not torchOptimizer
+            ):
+                raise ValueError(unknown_optimizer_msg)
             optimizer_params = {"lr": self.lr}
         # if optimizer is an optimizer class, use it as is
         elif isinstance(self.optimizer, type) and issubclass(

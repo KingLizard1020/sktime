@@ -65,6 +65,21 @@ def test_lookup_uses_optional_alias_dict():
     not run_test_module_changed(["sktime.utils._lookup"]),
     reason="Run if relevant content has changed.",
 )
+def test_lookup_alias_dict_does_not_clobber_exported_name():
+    """A bad alias_dict value must not replace a name exported by the module."""
+    import numpy as np
+
+    from sktime.utils._lookup import _lookup
+
+    obj = _lookup("ndarray", "numpy", alias_dict={"ndarray": "not_a_real_name_xyz"})
+
+    assert obj is np.ndarray
+
+
+@pytest.mark.skipif(
+    not run_test_module_changed(["sktime.utils._lookup"]),
+    reason="Run if relevant content has changed.",
+)
 def test_lookup_unknown_alias_raises():
     """Unknown names raise ValueError after the module map is checked."""
     from sktime.utils._lookup import _lookup
