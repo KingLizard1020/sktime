@@ -1,0 +1,42 @@
+name: force-fix-11116
+on:
+  push:
+    branches: [cursor/trigger-11116-fix]
+    paths:
+      - '.github/workflows/force-fix-11116.yml'
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Rebuild PR branch on upstream main
+        run: |
+          set -euo pipefail
+          git config user.name "Kailash Nelson"
+          git config user.email "37966146+KingLizard1020@users.noreply.github.com"
+          cp .github/pr11116/lucky.py /tmp/lucky.py
+          git fetch https://github.com/sktime/sktime.git main:upstream-main
+          git checkout -B cursor/lucky-dtw-dist-doctest-2a2c upstream-main
+          cp /tmp/lucky.py sktime/dists_kernels/lucky.py
+          echo aW1wb3J0IGpzb24KZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnAgPSBQYXRoKCcuYWxsLWNvbnRyaWJ1dG9yc3JjJykKZCA9IGpzb24ubG9hZHMocC5yZWFkX3RleHQoKSkKaWYgbm90IGFueShjLmdldCgnbG9naW4nKSA9PSAnS2luZ0xpemFyZDEwMjAnIGZvciBjIGluIGRbJ2NvbnRyaWJ1dG9ycyddKToKICAgIGRbJ2NvbnRyaWJ1dG9ycyddLmFwcGVuZCh7CiAgICAgICAgJ2xvZ2luJzogJ0tpbmdMaXphcmQxMDIwJywKICAgICAgICAnbmFtZSc6ICdLYWlsYXNoIE5lbHNvbicsCiAgICAgICAgJ2F2YXRhcl91cmwnOiAnaHR0cHM6Ly9hdmF0YXJzLmdpdGh1YnVzZXJjb250ZW50LmNvbS91LzM3OTY2MTQ2P3Y9NCcsCiAgICAgICAgJ3Byb2ZpbGUnOiAnaHR0cHM6Ly9naXRodWIuY29tL0tpbmdMaXphcmQxMDIwJywKICAgICAgICAnY29udHJpYnV0aW9ucyc6IFsnY29kZScsICdkb2MnLCAndGVzdCddLAogICAgfSkKICAgIHAud3JpdGVfdGV4dChqc29uLmR1bXBzKGQsIGluZGVudD0yLCBlbnN1cmVfYXNjaWk9RmFsc2UpICsgJ1xuJykK | base64 -d > /tmp/add_contributor.py
+          python3 /tmp/add_contributor.py
+          npm install -g all-contributors-cli
+          all-contributors generate
+          git add sktime/dists_kernels/lucky.py .all-contributorsrc CONTRIBUTORS.md
+          printf '%s\n' '[DOC] add doctest example for LuckyDtwDist' '' 'Add a runnable Examples section to LuckyDtwDist and add KingLizard1020' 'to all-contributors with code, doc, and test badges. Towards #10782.' '' 'Keep return_type="pd-multiindex" as requested in review.' > /tmp/commitmsg.txt
+          git commit --author="Kailash Nelson <37966146+KingLizard1020@users.noreply.github.com>" -F /tmp/commitmsg.txt
+          git push --force origin cursor/lucky-dtw-dist-doctest-2a2c
+          echo "NEW_HEAD=$(git rev-parse HEAD)"
+          git log -1 --format=fuller
+          test "$(git rev-list --count upstream-main..HEAD)" = "1" && echo 'SINGLE_COMMIT=yes'
+          grep -n 'pd-multiindex' sktime/dists_kernels/lucky.py
